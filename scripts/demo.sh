@@ -14,9 +14,7 @@ make doctor
 make up CLUSTER="$CLUSTER" NS="$NS"
 make break NS="$NS" SCENARIO="$SCENARIO"
 
-echo "==> waiting 30s for the workload to actually fail"
-sleep 30
-
+make verify NS="$NS"
 make status NS="$NS"
 
 echo

@@ -32,6 +32,7 @@ cd kprompt-examples
 
 make up                          # kind cluster + payments namespace + healthy baseline
 make break SCENARIO=01-crashloop # break something on purpose
+make verify                      # wait until it is actually broken
 make status                      # see the damage
 
 kprompt agent run -n payments --analyze --health --heuristic
@@ -77,6 +78,12 @@ make fix-all
 `make break-all` is the best way to see the health score move, since the baseline
 `web` Deployment stays healthy the whole time and gives the score something to
 weigh against.
+
+`make verify` blocks until whatever you applied has genuinely reached its broken
+state — a crashloop needs a couple of restart cycles, an OOM needs the container to
+allocate first. Running the agent before that just shows you a namespace mid-startup.
+CI runs the same check, so a scenario that quietly stops failing (say a base image
+changes behaviour) turns the build red instead of silently making the demo boring.
 
 ## The full pipeline
 

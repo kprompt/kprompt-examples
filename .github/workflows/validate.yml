@@ -12,6 +12,7 @@ permissions:
 jobs:
   manifests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +33,11 @@ jobs:
       - name: Apply every scenario
         run: make break-all
 
+      - name: Assert every scenario actually breaks
+        run: make verify
+
       - name: Show namespace state
+        if: always()
         run: make status
 
       - name: Tear scenarios down again

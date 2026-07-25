@@ -90,6 +90,10 @@ status: ## Show pods, deployments and recent warnings in the namespace
 	@$(KUBECTL) get events -n $(NS) --field-selector type=Warning \
 		--sort-by=.lastTimestamp 2>/dev/null | tail -20 || true
 
+.PHONY: verify
+verify: ## Wait until the applied scenarios reach their intended broken states
+	@NS=$(NS) scripts/verify.sh
+
 .PHONY: agent
 agent: ## Run the Observe agent (heuristic, no LLM key needed)
 	$(KPROMPT) agent run -n $(NS) --analyze --health --heuristic
