@@ -18,18 +18,22 @@ spec:
         app: redis
     spec:
       containers:
+        # Lightweight stub: memory discovery keys off the Service name "redis"
+        # (and env REDIS_URL on orders). A real redis:7 image is fine when the
+        # node has disk; on a crowded kind laptop it often OOMs the disk budget
+        # and the demo becomes about storage instead of dependency facts.
         - name: redis
-          image: redis:7-alpine
-          args: ["--save", "", "--appendonly", "no"]
+          image: busybox:1.36
+          command: ["sh", "-c", "echo redis-stub listening; sleep 3600"]
           ports:
             - containerPort: 6379
           resources:
             requests:
-              cpu: 10m
-              memory: 32Mi
+              cpu: 5m
+              memory: 8Mi
             limits:
-              cpu: 200m
-              memory: 128Mi
+              cpu: 50m
+              memory: 32Mi
 ---
 apiVersion: v1
 kind: Service
@@ -63,22 +67,22 @@ spec:
         app: postgres
     spec:
       containers:
+        # Stub, not a real Postgres. Real postgres:16-alpine runs initdb under
+        # /var/lib/postgresql/data and fails with "No space left on device" on
+        # a full kind node — which then pollutes the demo with a dependency
+        # CrashLoop that is unrelated to the orders→cache story.
         - name: postgres
-          image: postgres:16-alpine
-          env:
-            - name: POSTGRES_PASSWORD
-              value: demo-not-a-secret
-            - name: POSTGRES_DB
-              value: payments
+          image: busybox:1.36
+          command: ["sh", "-c", "echo postgres-stub listening; sleep 3600"]
           ports:
             - containerPort: 5432
           resources:
             requests:
-              cpu: 25m
-              memory: 64Mi
+              cpu: 5m
+              memory: 8Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: 50m
+              memory: 32Mi
 ---
 apiVersion: v1
 kind: Service

@@ -141,8 +141,8 @@ Being straight about it, since demo repos are where overclaiming happens:
 - **Heuristic analysis is not LLM analysis.** It is deterministic and offline, which
   makes it good for demos and CI, but a real LLM run reads differently. Set
   `--heuristic=false` with a provider key to compare.
-- **These workloads are toys.** Redis and Postgres in `07-dependencies` have no
-  persistence, no auth worth the name, and a password in plain YAML. Never copy them
+- **These workloads are toys.** Redis and Postgres in `07-dependencies` are busybox
+  stubs (Service name + env for memory discovery), not databases. Never copy them
   into a real cluster.
 
 ## Alternatives to kind
