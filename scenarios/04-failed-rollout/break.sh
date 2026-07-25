@@ -16,7 +16,7 @@ kubectl rollout status -n "$NS" deployment/checkout --timeout=120s
 echo "==> rolling out broken revision 2 (will stall on purpose)"
 kubectl patch -n "$NS" deployment/checkout \
   --type=strategic \
-  --patch-file "$DIR/broken.yaml"
+  --patch-file "$DIR/broken.patch.yaml"
 
 echo "==> revision history"
 kubectl rollout history -n "$NS" deployment/checkout

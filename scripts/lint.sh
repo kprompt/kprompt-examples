@@ -4,8 +4,9 @@
 # kubectl needs a reachable server to resolve REST mappings, so --dry-run=client
 # is not usable offline here. Run `make up` first, or let CI's kind cluster do it.
 #
-# agent/values-agent.yaml is skipped on purpose: it is a Helm values file, not a
-# Kubernetes manifest.
+# Two kinds of file are skipped on purpose, because neither is a complete
+# manifest: agent/values-agent.yaml (Helm values) and *.patch.yaml (strategic
+# merge patches applied on top of an existing object).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,7 +29,7 @@ fi
 files=()
 while IFS= read -r f; do
   files+=("$f")
-done < <(find base scenarios -name '*.yaml' | sort)
+done < <(find base scenarios -name '*.yaml' ! -name '*.patch.yaml' | sort)
 
 # The KpromptAgent CR only validates once the product CRD is installed.
 if kubectl get crd kpromptagents.kprompt.ai >/dev/null 2>&1; then
@@ -43,7 +44,7 @@ for f in "${files[@]}"; do
     echo "ok   $f"
   else
     echo "FAIL $f"
-    echo "$out" | sed 's/^/     /'
+    echo "$out" | awk '{ print "     " $0 }'
     fail=1
   fi
 done
