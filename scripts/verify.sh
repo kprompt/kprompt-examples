@@ -7,6 +7,11 @@
 #
 # Run after `make break-all` (or after breaking a single scenario — checks are
 # skipped for scenarios that are not currently applied).
+
+# The predicate helpers are invoked indirectly as `wait_for <desc> <fn> [args]`,
+# which shellcheck's reachability analysis cannot follow.
+# shellcheck disable=SC2317
+
 set -euo pipefail
 
 NS="${NS:-payments}"
