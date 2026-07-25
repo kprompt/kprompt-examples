@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: payments
+  annotations:
+    kubernetes.io/change-cause: "kprompt-examples: revision 2 (broken image)"
+spec:
+  template:
+    spec:
+      containers:
+        - name: checkout
+          # Nonexistent tag -> new ReplicaSet can never become ready,
+          # rollout stalls with revision 1 still serving.
+          image: nginx:this-tag-does-not-exist

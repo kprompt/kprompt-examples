@@ -1,0 +1,55 @@
+# Values for the in-cluster kprompt-agent chart, tuned for this demo repo.
+#
+#   helm upgrade --install kprompt-agent \
+#     oci://ghcr.io/kprompt/charts/kprompt-agent \
+#     -n payments -f agent/values-agent.yaml
+#
+# Or against a local checkout of the product repo:
+#
+#   helm upgrade --install kprompt-agent ../kprompt/charts/kprompt-agent \
+#     -n payments -f agent/values-agent.yaml
+
+watchNamespace: payments
+
+image:
+  repository: ghcr.io/kprompt/kprompt
+  tag: ""
+  pullPolicy: IfNotPresent
+
+agent:
+  analyze: true
+  fetchLogs: true
+  health: true
+  # Heuristic keeps the demo offline and free. Set false and put a key in the
+  # Secret below when you want real LLM analysis.
+  heuristic: true
+  slack: false
+  webhook: false
+  memory: true
+  memoryBackend: configmap
+  minSeverity: medium
+  minConfidence: "0.7"
+  extraArgs:
+    - --watch
+    - pods,events,deployments,replicasets,jobs,cronjobs,pvc
+
+# Never commit real credentials. Create the Secret out of band instead:
+#   kubectl -n payments create secret generic kprompt-agent \
+#     --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY"
+secret:
+  create: false
+  name: kprompt-agent
+
+# Surface healthScore / lastAlert onto the KpromptAgent CR in agent/kpromptagent.yaml.
+agentCR:
+  name: payments
+  namespace: payments
+  create: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

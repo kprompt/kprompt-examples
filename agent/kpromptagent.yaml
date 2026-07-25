@@ -1,0 +1,35 @@
+apiVersion: kprompt.ai/v1
+kind: KpromptAgent
+metadata:
+  name: payments
+  namespace: payments
+spec:
+  # Observe is the only valid mode (ADR-0013). The agent never applies,
+  # patches or deletes cluster resources.
+  mode: Observe
+  namespace: payments
+  watches:
+    - pods
+    - events
+    - deployments
+    - replicasets
+    - jobs
+    - cronjobs
+    - pvc
+  llm:
+    provider: openai
+    # true = no LLM calls, no API key, no spend. Flip to false once you have
+    # put a key in the kprompt-agent Secret.
+    heuristic: true
+  notify:
+    slack: false
+    webhook: false
+  severity:
+    minimum: medium
+    minConfidence: 0.7
+  fetchLogs: true
+  health: true
+  secretRef:
+    name: kprompt-agent
+# status (healthScore, healthTrend, lastAlert, openIncidents, conditions) is
+# filled by the Operator, or by `kprompt agent run --agent-cr payments`.

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache
+  namespace: payments
+  labels:
+    app: cache
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: oom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache
+  template:
+    metadata:
+      labels:
+        app: cache
+    spec:
+      containers:
+        - name: cache
+          image: python:3.12-alpine
+          # Allocates ~200Mi against a 32Mi limit -> OOMKilled.
+          command:
+            - python
+            - -c
+            - |
+              import time
+              print("warming cache", flush=True)
+              blob = bytearray(200 * 1024 * 1024)
+              print("warm", len(blob), flush=True)
+              time.sleep(3600)
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi

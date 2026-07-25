@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: payments
+  labels:
+    app: api
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: crashloop
+  annotations:
+    kubernetes.io/change-cause: "kprompt-examples: intentionally broken start command"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: busybox:1.36
+          # Logs something first so --fetch-logs has real evidence to quote,
+          # then exits non-zero to trigger the restart backoff.
+          command:
+            - sh
+            - -c
+            - |
+              echo "starting payments-api"
+              echo "connecting to postgres://payments-db:5432/payments"
+              sleep 2
+              echo "FATAL: dial tcp payments-db:5432: connect: connection refused"
+              exit 1
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi

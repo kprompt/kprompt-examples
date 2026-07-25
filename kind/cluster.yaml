@@ -1,0 +1,7 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+# Single-node cluster is enough for every scenario in this repo.
+# Pin the node image if you need a reproducible Kubernetes version, e.g.
+#   image: kindest/node:v1.31.0
+nodes:
+  - role: control-plane

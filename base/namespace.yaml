@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    app.kubernetes.io/part-of: kprompt-examples
+---
+# Healthy baseline so the health score has something good to weigh against.
+# Without this every scenario would drive the namespace to ~0 and the score
+# stops being interesting to look at.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: payments
+  labels:
+    app: web
+    app.kubernetes.io/part-of: kprompt-examples
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: payments
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80

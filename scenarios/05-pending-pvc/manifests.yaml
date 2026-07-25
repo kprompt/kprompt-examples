@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ledger-data
+  namespace: payments
+  labels:
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: pending-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # kind provides a default "standard" StorageClass that would bind instantly,
+  # so name one that cannot exist to keep the claim Pending.
+  storageClassName: kprompt-nonexistent-storage
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ledger
+  namespace: payments
+  labels:
+    app: ledger
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: pending-pvc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ledger
+  template:
+    metadata:
+      labels:
+        app: ledger
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ledger-data
+      containers:
+        - name: ledger
+          image: busybox:1.36
+          command: ["sh", "-c", "echo ledger up; sleep 3600"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/ledger
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi

@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: reconcile-batch
+  namespace: payments
+  labels:
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: job-failure
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: reconcile-batch
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: reconcile
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "reconciling ledger batch 2026-07-25"
+              sleep 1
+              echo "ERROR: 143 rows failed validation, aborting"
+              exit 1
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-settlement
+  namespace: payments
+  labels:
+    app.kubernetes.io/part-of: kprompt-examples
+    kprompt.ai/scenario: job-failure
+spec:
+  # Every minute so a demo does not need to wait for midnight.
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 30
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: nightly-settlement
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: settle
+              image: busybox:1.36
+              command:
+                - sh
+                - -c
+                - |
+                  echo "settling payouts"
+                  sleep 1
+                  echo "ERROR: upstream settlement API returned 503"
+                  exit 1
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi

@@ -1,0 +1,7 @@
+# Local artifacts, never commit
+kubeconfig
+*.kubeconfig
+.env
+.DS_Store
+tmp/
+out/
