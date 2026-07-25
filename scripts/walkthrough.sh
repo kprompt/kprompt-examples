@@ -15,7 +15,7 @@ cd "$ROOT"
 
 # Prefer a kprompt that actually has `agent` (v0.5+). PATH may still point at
 # an older Homebrew install.
-# shellcheck source=resolve-kprompt.sh
+# shellcheck disable=SC1091
 source "$ROOT/scripts/resolve-kprompt.sh"
 export KPROMPT
 echo "==> using $KPROMPT ($("$KPROMPT" version 2>/dev/null || echo unknown))"
