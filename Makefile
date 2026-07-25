@@ -6,7 +6,8 @@ SCENARIO ?= 01-crashloop
 
 KIND     ?= kind
 KUBECTL  ?= kubectl
-KPROMPT  ?= kprompt
+# Empty → scripts/resolve-kprompt.sh picks a binary that has `agent` (v0.5+).
+KPROMPT  ?=
 
 SCENARIOS := $(sort $(notdir $(wildcard scenarios/*)))
 
@@ -23,16 +24,23 @@ help: ## Show this help
 	@for s in $(SCENARIOS); do echo "  $$s"; done
 	@echo
 	@echo "Vars: CLUSTER=$(CLUSTER) NS=$(NS) SCENARIO=$(SCENARIO)"
+	@echo "One-shot: make walkthrough   (up → break-all → verify → agent-full)"
 
 .PHONY: doctor
-doctor: ## Check required tools and a reachable cluster
+doctor: ## Check required tools (kind, kubectl, kprompt>=0.5 with agent)
 	@fail=0; \
-	for bin in $(KIND) $(KUBECTL) $(KPROMPT); do \
+	for bin in $(KIND) $(KUBECTL); do \
 		if command -v $$bin >/dev/null 2>&1; then echo "ok   $$bin"; \
 		else echo "MISS $$bin"; fail=1; fi; \
 	done; \
 	if docker info >/dev/null 2>&1; then echo "ok   docker daemon"; \
 	else echo "MISS docker daemon (start Docker Desktop / colima)"; fail=1; fi; \
+	if [ -n "$(KPROMPT)" ]; then KPROMPT="$(KPROMPT)"; \
+	elif . scripts/resolve-kprompt.sh; then :; \
+	else fail=1; KPROMPT=""; fi; \
+	if [ -n "$$KPROMPT" ]; then \
+		echo "ok   $$KPROMPT ($$( "$$KPROMPT" version 2>/dev/null || echo agent-ready ))"; \
+	fi; \
 	exit $$fail
 
 .PHONY: up
@@ -46,7 +54,7 @@ up: ## Create the kind cluster and apply the baseline namespace
 	@$(KUBECTL) config use-context kind-$(CLUSTER)
 	@$(MAKE) --no-print-directory base
 	@echo
-	@echo "Cluster ready. Next: make break SCENARIO=$(SCENARIO) && make agent"
+	@echo "Cluster ready. Next: make walkthrough   # or make break && make agent"
 
 .PHONY: base
 base: ## Apply namespace + healthy baseline workload
@@ -65,7 +73,7 @@ break: ## Apply one broken scenario (SCENARIO=<name>)
 		$(KUBECTL) apply -n $(NS) -f scenarios/$(SCENARIO)/manifests.yaml; \
 	fi
 	@echo
-	@echo "Give it ~30s to fail, then: make status"
+	@echo "Give it ~30s to fail, then: make verify && make status"
 
 .PHONY: fix
 fix: ## Remove one scenario (SCENARIO=<name>)
@@ -96,14 +104,20 @@ verify: ## Wait until the applied scenarios reach their intended broken states
 
 .PHONY: agent
 agent: ## Run the Observe agent (heuristic, no LLM key needed)
-	$(KPROMPT) agent run -n $(NS) --analyze --health --heuristic
+	@if [ -n "$(KPROMPT)" ]; then KPROMPT="$(KPROMPT)"; else . scripts/resolve-kprompt.sh; fi; \
+	"$$KPROMPT" agent run -n $(NS) --analyze --health --heuristic
 
 .PHONY: agent-full
 agent-full: ## Run the agent with logs, expanded watches, memory, patterns and propose-only Autopilot
-	$(KPROMPT) agent run -n $(NS) \
+	@if [ -n "$(KPROMPT)" ]; then KPROMPT="$(KPROMPT)"; else . scripts/resolve-kprompt.sh; fi; \
+	"$$KPROMPT" agent run -n $(NS) \
 		--watch pods,events,deployments,replicasets,jobs,cronjobs,pvc \
 		--analyze --fetch-logs --health --heuristic \
 		--memory --patterns --autopilot-propose
+
+.PHONY: walkthrough
+walkthrough: ## One-shot sellable demo: up → break-all → verify → agent-full (DEMO_SECONDS=45)
+	@scripts/walkthrough.sh
 
 .PHONY: down
 down: ## Delete the kind cluster

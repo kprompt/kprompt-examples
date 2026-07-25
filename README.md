@@ -20,34 +20,46 @@ account, no spend.**
 
 ```bash
 brew install kind kubectl
-curl -fsSL https://raw.githubusercontent.com/kprompt/kprompt/main/install/install.sh | sh
-make doctor   # verifies all of the above, including a running Docker daemon
+curl -fsSL https://kprompt.ai/install | bash   # v0.5+ with `kprompt agent`
+make doctor   # kind, kubectl, docker, and a kprompt that has `agent`
 ```
 
 ## Quickstart
 
+One command — kind cluster, every failure scenario, then the Observe agent for ~45s:
+
 ```bash
 git clone https://github.com/kprompt/kprompt-examples.git
 cd kprompt-examples
+make walkthrough
+```
 
+That is `up → break-all → verify → agent-full`. Needs **kprompt v0.5+** (`agent`
+subcommand). `make doctor` finds a usable binary even when Homebrew still shadows
+an older `kprompt` on PATH (common: brew 0.3 vs `~/.local/bin` 0.5).
+
+Step by step:
+
+```bash
 make up                          # kind cluster + payments namespace + healthy baseline
 make break SCENARIO=01-crashloop # break something on purpose
 make verify                      # wait until it is actually broken
 make status                      # see the damage
-
-kprompt agent run -n payments --analyze --health --heuristic
-```
-
-Or the whole thing in one command:
-
-```bash
-./scripts/demo.sh
+make agent                       # heuristic Observe agent (no LLM key)
 ```
 
 Tear down when you are done:
 
 ```bash
 make down   # deletes the kind cluster entirely
+```
+
+### Record a 60s clip
+
+```bash
+# asciinema (optional)
+asciinema rec -c 'DEMO_SECONDS=60 make walkthrough' kprompt-observe-demo.cast
+# GIF via agg: https://github.com/asciinema/agg
 ```
 
 ## Scenarios
