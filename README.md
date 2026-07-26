@@ -56,11 +56,18 @@ make down   # deletes the kind cluster entirely
 
 ### Record a 60s clip
 
+One command prepares kind (unless `SKIP_UP=1`), records the Observe agent, and optionally renders a GIF:
+
 ```bash
-# asciinema (optional)
-asciinema rec -c 'DEMO_SECONDS=60 make walkthrough' kprompt-observe-demo.cast
-# GIF via agg: https://github.com/asciinema/agg
+brew install asciinema          # required
+# optional GIF: cargo install --git https://github.com/asciinema/agg
+
+make record                     # → dist/kprompt-observe-demo.cast (+ .gif if agg is on PATH)
+DEMO_SECONDS=45 make record
+SKIP_UP=1 make record           # reuse an already-broken cluster
 ```
+
+Play locally with `asciinema play dist/kprompt-observe-demo.cast`, or upload with `asciinema upload …`.
 
 ## Scenarios
 

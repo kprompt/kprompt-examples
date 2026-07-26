@@ -119,6 +119,10 @@ agent-full: ## Run the agent with logs, expanded watches, memory, patterns and p
 walkthrough: ## One-shot sellable demo: up → break-all → verify → agent-full (DEMO_SECONDS=45)
 	@scripts/walkthrough.sh
 
+.PHONY: record
+record: ## Record asciinema (+ GIF if agg is installed). DEMO_SECONDS=60 SKIP_UP=0
+	@scripts/record.sh
+
 .PHONY: down
 down: ## Delete the kind cluster
 	@echo "==> deleting kind cluster $(CLUSTER)"

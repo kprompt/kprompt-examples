@@ -5,3 +5,6 @@ kubeconfig
 .DS_Store
 tmp/
 out/
+dist/
+*.cast
+*.gif
