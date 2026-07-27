@@ -84,6 +84,9 @@ the agent is expected to conclude.
 | [`06-job-failure`](scenarios/06-job-failure) | Job + CronJob keep failing | dedup of recurring batch failures |
 | [`07-dependencies`](scenarios/07-dependencies) | app cannot reach its cache | `--memory` dependency discovery |
 
+**Namespace Agent loop** (memory / patterns / priority / handoff client on top of 01–07):
+[docs/namespace-agent-loop.md](./docs/namespace-agent-loop.md).
+
 Switch between them:
 
 ```bash
