@@ -90,23 +90,29 @@ kprompt agent run -n payments \
 |--------|-----|
 | `gitops:` evidence or `degraded: gitops` | AG-035 honesty — never invent sync state |
 
-## Loop E — Coordinator handoff (client only)
-
-Coordinator **service** is gated (AG-037). The **client** posts when Unknowns
-suggest cross-ns dependency:
+## Loop E — Coordinator handoff + thin service
 
 ```bash
-# Optional: local catcher
-# python3 -m http.server 9090   # or any POST sink
+# Terminal A — Coordinator (mutate=off)
+kprompt agent coordinator --addr :9090
 
+# Terminal B — ns agent
 kprompt agent run -n payments \
   --analyze --heuristic \
-  --coordinator-url http://127.0.0.1:9090/handoff \
+  --coordinator-url http://127.0.0.1:9090/v1/handoff \
   --duration 30s
 ```
 
-Handoff fires only when the report Unknowns/summary look cross-namespace.
-No sink → log `coordinator handoff: …` errors; agent stays Observe-only.
+Handoff fires when report Unknowns/summary look cross-namespace. Inspect:
+
+```bash
+curl -s http://127.0.0.1:9090/v1/recent | head
+```
+
+| Expect | Why |
+|--------|-----|
+| `CoordinatorReply` with `mutateAttempted: false` | AG-037 / ADR-0017 |
+| Unknowns note when suspect not probed | AG-038 merge honesty |
 
 ## Full NA-ish one-liner
 
@@ -121,7 +127,7 @@ kprompt agent run -n payments \
 
 - Silent Autopilot apply
 - ClusterRole namespace agents
-- A production Coordinator operator (AG-037+)
+- Coordinator workload mutate (service is receive/merge only)
 - Invented Prometheus/OTel numbers
 
 See [agent-ops.md](https://github.com/kprompt/kprompt/blob/main/docs/agent-ops.md) for RBAC/cost runbook.
