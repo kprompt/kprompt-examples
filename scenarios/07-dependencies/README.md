@@ -1,19 +1,23 @@
-# 07 · Dependencies (namespace memory demo)
+# 07 · Dependencies (namespace memory + Coordinator cross-ns demo)
 
-Adds a realistic dependency graph to `payments`: a Redis and a Postgres, plus an
-`orders` app wired to both through env vars — and failing with connection errors.
+Adds a realistic dependency graph:
 
-Namespace memory discovers dependencies from **Service names, container images, and
-env var names**, so all three signals are present here on purpose.
+- **payments:** local `redis` / `postgres` stubs (memory discovery) + failing `orders`
+- **platform:** CrashLooping `cache` Service that `orders` actually dials
+
+`orders` sets `REDIS_URL=redis://cache.platform.svc.cluster.local:6379/0` so
+Namespace Agent Unknowns / summary can name **namespace platform**, and the
+Coordinator `--probe-kube` path has real Pods/Events to merge.
 
 ## What the agent should do
 
 | Stage | Expected |
 |-------|----------|
-| Discover | `redis` and `postgres` show up as `dependency` facts |
-| Source | Service name (`redis`), image (`postgres:16-alpine`), env (`REDIS_URL`, `DATABASE_URL`) |
-| Relevance | The connection-refused incident text mentions redis, so those facts get injected into the analyzer context |
+| Discover | `redis` and `postgres` show up as `dependency` facts (local Services) |
+| Source | Service name (`redis`), image stubs, env (`REDIS_URL`, `DATABASE_URL`) |
+| Cross-ns | `REDIS_URL` / logs mention `cache.platform.svc` → suspect `platform` |
 | Analyze | Root cause reasons about the dependency instead of only "container exited 1" |
+| Coordinator | `make coordinator-e2e` → probe merges platform evidence, `mutateAttempted=false` |
 
 ## Run
 
@@ -27,20 +31,16 @@ kprompt agent memory list -n payments
 # Then watch with memory injected into the analyzer context
 kprompt agent run -n payments --analyze --health --heuristic --memory --fetch-logs
 
+# Full Coordinator correlation E2E (probe + /v1/recent)
+make coordinator-e2e
+
 make fix SCENARIO=07-dependencies
 ```
 
 ## Notes
 
-Redis and Postgres here are **busybox stubs**, not real databases. Memory discovery
-keys off Service names (`redis`, `postgres`) and env vars (`REDIS_URL`,
-`DATABASE_URL`) — pulling `postgres:16` / `redis:7` on a crowded kind node often
-fails with disk pressure (`initdb: No space left on device`) and turns the demo
-into a storage incident instead of a dependency story.
-
-The `orders` app points at `redis-master` (a hostname that does not resolve) while
-the actual Service is `redis`, which is why it fails with connection refused. That
-mismatch is the kind of thing the memory facts help an analysis catch.
+Redis and Postgres in **payments** are **busybox stubs**, not real databases.
+The real failure is the cross-ns `cache` in **platform** (also a stub that exits).
 
 Facts are stored locally (`~/.config/kprompt/memory`) by default and never uploaded.
 Use `--memory-backend configmap` for the in-cluster variant.

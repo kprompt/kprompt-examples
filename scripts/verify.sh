@@ -72,6 +72,11 @@ exists() {
   kubectl get "$1" -n "$NS" >/dev/null 2>&1
 }
 
+# exists_in_ns <namespace> <resource>
+exists_in_ns() {
+  kubectl get "$2" -n "$1" >/dev/null 2>&1
+}
+
 echo "==> baseline"
 wait_for "web has 2 ready replicas" ready_replicas_is web 2
 
@@ -119,6 +124,10 @@ if exists deploy/orders; then
   wait_for "postgres Service present for memory discovery" exists svc/postgres
   wait_for "orders pod failing on its cache dependency" \
     waiting_reason_matches orders CrashLoopBackOff
+  if kubectl get ns platform >/dev/null 2>&1; then
+    wait_for "platform/cache Deployment present for Coordinator probe" \
+      exists_in_ns platform deploy/cache
+  fi
 fi
 
 echo

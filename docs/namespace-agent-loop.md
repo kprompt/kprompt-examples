@@ -90,29 +90,44 @@ kprompt agent run -n payments \
 |--------|-----|
 | `gitops:` evidence or `degraded: gitops` | AG-035 honesty — never invent sync state |
 
-## Loop E — Coordinator handoff + thin service
+## Loop E — Coordinator handoff + kube probe
+
+Needs scenario **07-dependencies** (payments `orders` → platform `cache`).
 
 ```bash
-# Terminal A — Coordinator (mutate=off)
-kprompt agent coordinator --addr :9090
+make break SCENARIO=07-dependencies
+make verify
+
+# One-shot assert (preferred): synthetic handoff + --probe-kube merge
+make coordinator-e2e
+```
+
+Manual two-terminal path:
+
+```bash
+# Terminal A — Coordinator with read-only probe (mutate=off)
+kprompt agent coordinator --addr :9090 --probe-kube
 
 # Terminal B — ns agent
 kprompt agent run -n payments \
-  --analyze --heuristic \
+  --analyze --heuristic --fetch-logs --memory \
   --coordinator-url http://127.0.0.1:9090/v1/handoff \
-  --duration 30s
+  --duration 45s
 ```
 
-Handoff fires when report Unknowns/summary look cross-namespace. Inspect:
+Handoff fires when report summary/Unknowns mention `cache.platform.svc` / namespace platform.
+Inspect:
 
 ```bash
-curl -s http://127.0.0.1:9090/v1/recent | head
+curl -s http://127.0.0.1:9090/v1/recent | python3 -m json.tool | head -40
 ```
 
 | Expect | Why |
 |--------|-----|
 | `CoordinatorReply` with `mutateAttempted: false` | AG-037 / ADR-0017 |
-| Unknowns note when suspect not probed | AG-038 merge honesty |
+| `routing` contains `probed namespace platform` | AG-050 KubeProbe |
+| `merged.evidence` non-empty | platform CrashLoop pods/events |
+| `suspectNamespace: platform` | AG-048 extraction / envelope |
 
 ## Full NA-ish one-liner
 

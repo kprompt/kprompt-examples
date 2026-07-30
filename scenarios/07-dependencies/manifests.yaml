@@ -122,7 +122,9 @@ spec:
           image: busybox:1.36
           env:
             - name: REDIS_URL
-              value: redis://redis-master.payments.svc.cluster.local:6379/0
+              # Cross-ns DNS → NeedsHandoff extracts suspectNamespace=platform (AG-048).
+              # Local Service "redis" remains in payments for memory discovery demos.
+              value: redis://cache.platform.svc.cluster.local:6379/0
             - name: DATABASE_URL
               value: postgres://payments@postgres.payments.svc.cluster.local:5432/payments
           command:
@@ -132,8 +134,8 @@ spec:
               echo "orders starting"
               echo "REDIS_URL=$REDIS_URL"
               sleep 2
-              echo "ERROR: dial tcp: lookup redis-master.payments.svc.cluster.local: no such host"
-              echo "FATAL: cache unavailable, refusing to serve"
+              echo "ERROR: dial tcp cache.platform.svc.cluster.local:6379: connection refused"
+              echo "FATAL: cache unavailable in namespace platform, refusing to serve"
               exit 1
           resources:
             requests:

@@ -82,7 +82,7 @@ the agent is expected to conclude.
 | [`04-failed-rollout`](scenarios/04-failed-rollout) | revision 2 stalls, revision 1 still serving | `--autopilot-propose` (propose-only) |
 | [`05-pending-pvc`](scenarios/05-pending-pvc) | PVC never binds, pod stays Pending | why `--watch pods,events,pvc` matters |
 | [`06-job-failure`](scenarios/06-job-failure) | Job + CronJob keep failing | dedup of recurring batch failures |
-| [`07-dependencies`](scenarios/07-dependencies) | app cannot reach its cache | `--memory` dependency discovery |
+| [`07-dependencies`](scenarios/07-dependencies) | orders → platform/cache + local redis/postgres stubs | `--memory` + Coordinator probe (`make coordinator-e2e`) |
 
 **Namespace Agent loop** (memory / patterns / priority / handoff client on top of 01–07):
 [docs/namespace-agent-loop.md](./docs/namespace-agent-loop.md).

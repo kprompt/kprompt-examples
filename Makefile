@@ -78,8 +78,13 @@ break: ## Apply one broken scenario (SCENARIO=<name>)
 .PHONY: fix
 fix: ## Remove one scenario (SCENARIO=<name>)
 	@test -d scenarios/$(SCENARIO) || { echo "unknown SCENARIO=$(SCENARIO)"; exit 1; }
-	@echo "==> deleting scenarios/$(SCENARIO)"
-	@$(KUBECTL) delete -n $(NS) -f scenarios/$(SCENARIO)/manifests.yaml --ignore-not-found
+	@if [ -x scenarios/$(SCENARIO)/fix.sh ]; then \
+		echo "==> running scenarios/$(SCENARIO)/fix.sh"; \
+		NS=$(NS) scenarios/$(SCENARIO)/fix.sh; \
+	else \
+		echo "==> deleting scenarios/$(SCENARIO)"; \
+		$(KUBECTL) delete -n $(NS) -f scenarios/$(SCENARIO)/manifests.yaml --ignore-not-found; \
+	fi
 
 .PHONY: break-all
 break-all: ## Apply every scenario at once (messy namespace, good health-score demo)
@@ -118,6 +123,10 @@ agent-full: ## Run the agent with logs, expanded watches, memory, patterns and p
 .PHONY: walkthrough
 walkthrough: ## One-shot sellable demo: up → break-all → verify → agent-full (DEMO_SECONDS=45)
 	@scripts/walkthrough.sh
+
+.PHONY: coordinator-e2e
+coordinator-e2e: ## Kind E2E: 07-dependencies → Coordinator --probe-kube merge (AG-048…050)
+	@scripts/coordinator-e2e.sh
 
 .PHONY: record
 record: ## Record asciinema (+ GIF if agg is installed). DEMO_SECONDS=60 SKIP_UP=0
