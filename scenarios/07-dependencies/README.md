@@ -17,7 +17,7 @@ Coordinator `--probe-kube` path has real Pods/Events to merge.
 | Source | Service name (`redis`), image stubs, env (`REDIS_URL`, `DATABASE_URL`) |
 | Cross-ns | `REDIS_URL` / logs mention `cache.platform.svc` → suspect `platform` |
 | Analyze | Root cause reasons about the dependency instead of only "container exited 1" |
-| Coordinator | `make coordinator-e2e` → probe merges platform evidence, `mutateAttempted=false` |
+| Coordinator | `make coordinator-e2e` → probe merges platform evidence, durable `/v1/knowledge` restores after restart, `mutateAttempted=false` |
 
 ## Run
 

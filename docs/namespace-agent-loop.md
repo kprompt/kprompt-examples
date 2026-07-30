@@ -99,15 +99,16 @@ Needs scenario **07-dependencies** (payments `orders` → platform `cache`).
 make break SCENARIO=07-dependencies
 make verify
 
-# One-shot assert (preferred): synthetic handoff + --probe-kube merge
+# One-shot assert (preferred): synthetic handoff + --probe-kube merge + durable knowledge restore
 make coordinator-e2e
 ```
 
 Manual two-terminal path:
 
 ```bash
-# Terminal A — Coordinator with read-only probe (mutate=off)
-kprompt agent coordinator --addr :9090 --probe-kube
+# Terminal A — Coordinator with read-only probe + file knowledge (mutate=off)
+kprompt agent coordinator --addr :9090 --probe-kube \
+  --knowledge-backend file --knowledge-dir /tmp/kprompt-coord-knowledge
 
 # Terminal B — ns agent
 kprompt agent run -n payments \
@@ -121,6 +122,8 @@ Inspect:
 
 ```bash
 curl -s http://127.0.0.1:9090/v1/recent | python3 -m json.tool | head -40
+curl -s http://127.0.0.1:9090/v1/knowledge | python3 -m json.tool
+kprompt agent coordinator knowledge --url http://127.0.0.1:9090
 ```
 
 | Expect | Why |
@@ -129,6 +132,8 @@ curl -s http://127.0.0.1:9090/v1/recent | python3 -m json.tool | head -40
 | `routing` contains `probed namespace platform` | AG-050 KubeProbe |
 | `merged.evidence` non-empty | platform CrashLoop pods/events |
 | `suspectNamespace: platform` | AG-048 extraction / envelope |
+| `/v1/knowledge` `durable: true` + `payments→platform` edge | AG-059 · AG-060 |
+| Knowledge survives Coordinator restart (file/ConfigMap) | AG-061 e2e |
 | Slack bot thread follow-up (optional) | AG-053 `FormatReply` when `--slack` + coordinator-url |
 
 ## Full NA-ish one-liner

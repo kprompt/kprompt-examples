@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Kind E2E: 07-dependencies → Coordinator handoff + KubeProbe merge (AG-048…AG-050).
+# Kind E2E: 07-dependencies → Coordinator handoff + KubeProbe merge + durable Shared Knowledge
+# (AG-048…AG-050 · AG-059 · AG-060 · AG-061).
 #
 # Asserts:
 #   1. Coordinator accepts a handoff with suspectNamespace=platform
 #   2. --probe-kube merges platform Pod/Event evidence into CoordinatorReply
 #   3. mutateAttempted stays false
-#   4. Ns agent run with --coordinator-url can surface a handoff line (best-effort)
+#   4. GET /v1/knowledge shows payments→platform edge with durable=true (file store)
+#   5. After Coordinator restart, knowledge restores from the same file backend
+#   6. Ns agent run with --coordinator-url can surface a handoff line (best-effort)
 #
 # Usage:
 #   make coordinator-e2e
@@ -17,6 +20,7 @@ CLUSTER="${CLUSTER:-kprompt-demo}"
 NS="${NS:-payments}"
 COORD_ADDR="${COORD_ADDR:-127.0.0.1:19090}"
 COORD_URL="http://${COORD_ADDR}/v1/handoff"
+COORD_KNOWLEDGE_DIR="${COORD_KNOWLEDGE_DIR:-/tmp/kprompt-coordinator-e2e-knowledge}"
 DEMO_SECONDS="${DEMO_SECONDS:-25}"
 PRODUCT_BIN="${ROOT}/../kprompt/bin/kprompt"
 
@@ -26,15 +30,15 @@ resolve_kprompt() {
   if [ -n "${KPROMPT:-}" ] && [ -x "$KPROMPT" ]; then
     return 0
   fi
-  # Prefer a freshly built product binary (has --probe-kube).
-  if [ -x "$PRODUCT_BIN" ] && "$PRODUCT_BIN" agent coordinator --help 2>&1 | grep -q probe-kube; then
+  # Prefer a freshly built product binary (has --probe-kube + knowledge-backend).
+  if [ -x "$PRODUCT_BIN" ] && "$PRODUCT_BIN" agent coordinator --help 2>&1 | grep -q knowledge-backend; then
     KPROMPT="$PRODUCT_BIN"
     return 0
   fi
   # shellcheck disable=SC1091
   source "$ROOT/scripts/resolve-kprompt.sh"
-  if ! "$KPROMPT" agent coordinator --help 2>&1 | grep -q probe-kube; then
-    echo "MISS kprompt with --probe-kube (build sibling: cd ../kprompt && go build -o bin/kprompt ./cmd/kprompt)" >&2
+  if ! "$KPROMPT" agent coordinator --help 2>&1 | grep -q knowledge-backend; then
+    echo "MISS kprompt with --knowledge-backend (build sibling: cd ../kprompt && go build -o bin/kprompt ./cmd/kprompt)" >&2
     exit 1
   fi
 }
@@ -53,11 +57,40 @@ json_field() {
   python3 -c "import json,sys; o=json.loads(sys.argv[1]); print($expr)" "$raw"
 }
 
-cleanup() {
+start_coordinator() {
+  rm -f /tmp/kprompt-coordinator-e2e.log
+  "$KPROMPT" agent coordinator --addr "$COORD_ADDR" --probe-kube \
+    --knowledge-backend file --knowledge-dir "$COORD_KNOWLEDGE_DIR" \
+    >"/tmp/kprompt-coordinator-e2e.log" 2>&1 &
+  COORD_PID=$!
+  for _ in $(seq 1 20); do
+    if curl -sf "http://${COORD_ADDR}/healthz" >/dev/null; then
+      return 0
+    fi
+    sleep 0.25
+  done
+  echo "FAIL coordinator did not become healthy on $COORD_ADDR" >&2
+  tail -n 40 /tmp/kprompt-coordinator-e2e.log >&2 || true
+  return 1
+}
+
+stop_coordinator() {
   if [ -n "${COORD_PID:-}" ]; then
     kill "$COORD_PID" 2>/dev/null || true
     wait "$COORD_PID" 2>/dev/null || true
+    COORD_PID=""
   fi
+  # Wait until the port is free.
+  for _ in $(seq 1 20); do
+    if ! curl -sf "http://${COORD_ADDR}/healthz" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.25
+  done
+}
+
+cleanup() {
+  stop_coordinator || true
 }
 trap cleanup EXIT
 
@@ -89,18 +122,11 @@ for _ in $(seq 1 30); do
 done
 kubectl get pods -n platform -o wide || true
 
-echo "==> starting Coordinator with --probe-kube on $COORD_ADDR"
-"$KPROMPT" agent coordinator --addr "$COORD_ADDR" --probe-kube \
-  >"/tmp/kprompt-coordinator-e2e.log" 2>&1 &
-COORD_PID=$!
+rm -rf "$COORD_KNOWLEDGE_DIR"
+mkdir -p "$COORD_KNOWLEDGE_DIR"
 
-for _ in $(seq 1 20); do
-  if curl -sf "http://${COORD_ADDR}/healthz" >/dev/null; then
-    break
-  fi
-  sleep 0.25
-done
-curl -sf "http://${COORD_ADDR}/healthz" >/dev/null
+echo "==> starting Coordinator with --probe-kube + file knowledge on $COORD_ADDR"
+start_coordinator
 
 echo "==> POSTing synthetic handoff (suspect=platform)"
 handoff_json="$(mktemp)"
@@ -179,6 +205,44 @@ if [ "${recent_n:-0}" -lt 1 ]; then
 fi
 echo "    recent handoffs: $recent_n"
 
+echo "==> GET /v1/knowledge (durable Shared Knowledge)"
+knowledge="$(curl -sf "http://${COORD_ADDR}/v1/knowledge")"
+echo "$knowledge" | python3 -c 'import json,sys; o=json.load(sys.stdin); print("durable=%s handoffs=%s edges=%s" % (o.get("durable"), o.get("handoffCount"), o.get("edges")))'
+know_durable="$(json_field "$knowledge" 'str(o.get("durable")).lower()')"
+know_n="$(json_field "$knowledge" 'int(o.get("handoffCount") or 0)')"
+know_edge="$(json_field "$knowledge" 'next((("%s->%s" % (e.get("from"), e.get("suspect"))) for e in (o.get("edges") or []) if e.get("from")=="'"$NS"'" and e.get("suspect")=="platform"), "")')"
+if [ "$know_durable" != "true" ]; then
+  echo "FAIL /v1/knowledge durable=$know_durable (want true with file store)" >&2
+  fail=1
+fi
+if [ "${know_n:-0}" -lt 1 ]; then
+  echo "FAIL /v1/knowledge handoffCount=$know_n" >&2
+  fail=1
+fi
+if [ "$know_edge" != "${NS}->platform" ]; then
+  echo "FAIL knowledge missing ${NS}->platform edge (got '$know_edge')" >&2
+  fail=1
+fi
+
+echo "==> restart Coordinator — restore knowledge from $COORD_KNOWLEDGE_DIR"
+stop_coordinator
+start_coordinator
+knowledge2="$(curl -sf "http://${COORD_ADDR}/v1/knowledge")"
+echo "$knowledge2" | python3 -c 'import json,sys; o=json.load(sys.stdin); print("after-restore durable=%s handoffs=%s" % (o.get("durable"), o.get("handoffCount")))'
+know2_n="$(json_field "$knowledge2" 'int(o.get("handoffCount") or 0)')"
+know2_edge="$(json_field "$knowledge2" 'next((("%s->%s" % (e.get("from"), e.get("suspect"))) for e in (o.get("edges") or []) if e.get("from")=="'"$NS"'" and e.get("suspect")=="platform"), "")')"
+if [ "${know2_n:-0}" -lt 1 ]; then
+  echo "FAIL knowledge not restored after restart (handoffCount=$know2_n)" >&2
+  echo "     coordinator log:" >&2
+  tail -n 40 /tmp/kprompt-coordinator-e2e.log >&2 || true
+  fail=1
+fi
+if [ "$know2_edge" != "${NS}->platform" ]; then
+  echo "FAIL restored knowledge missing ${NS}->platform edge" >&2
+  fail=1
+fi
+echo "ok   Shared Knowledge restored after restart"
+
 echo "==> ns agent run (${DEMO_SECONDS}s) with --coordinator-url (best-effort handoff line)"
 set +e
 agent_log="$(mktemp)"
@@ -206,4 +270,5 @@ fi
 echo
 echo "==> coordinator-e2e PASSED"
 echo "    probe merged evidence=$evidence_n mutateAttempted=false suspect=platform"
+echo "    knowledge durable + restored ${NS}->platform after restart"
 echo "    tear down: make fix SCENARIO=07-dependencies && make down"
