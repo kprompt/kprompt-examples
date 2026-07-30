@@ -38,6 +38,28 @@ else
   echo "note: skipping agent/kpromptagent.yaml (KpromptAgent CRD not installed)"
 fi
 
+# Server dry-run does not persist Namespace objects. Multi-doc files that declare
+# a Namespace and then namespaced resources (e.g. platform.yaml) would otherwise
+# fail with "namespaces X not found" for every sibling object.
+ensure_namespace() {
+  local ns="$1"
+  [[ -n "$ns" ]] || return 0
+  if ! kubectl get namespace "$ns" >/dev/null 2>&1; then
+    kubectl create namespace "$ns" >/dev/null
+  fi
+}
+
+for f in "${files[@]}"; do
+  while IFS= read -r ns; do
+    ensure_namespace "$ns"
+  done < <(awk '
+    $1 == "kind:" && $2 == "Namespace" { want = 1; next }
+    want && /^metadata:/ { in_meta = 1; next }
+    want && in_meta && $1 == "name:" { print $2; want = 0; in_meta = 0 }
+    /^---/ { want = 0; in_meta = 0 }
+  ' "$f")
+done
+
 fail=0
 for f in "${files[@]}"; do
   if out="$(kubectl apply --dry-run=server -f "$f" 2>&1)"; then
