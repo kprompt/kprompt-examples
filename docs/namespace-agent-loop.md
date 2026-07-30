@@ -128,6 +128,7 @@ curl -s http://127.0.0.1:9090/v1/recent | python3 -m json.tool | head -40
 | `routing` contains `probed namespace platform` | AG-050 KubeProbe |
 | `merged.evidence` non-empty | platform CrashLoop pods/events |
 | `suspectNamespace: platform` | AG-048 extraction / envelope |
+| Slack bot thread follow-up (optional) | AG-053 `FormatReply` when `--slack` + coordinator-url |
 
 ## Full NA-ish one-liner
 
