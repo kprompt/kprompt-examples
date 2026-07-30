@@ -38,7 +38,7 @@ kprompt agent run -n payments \
 | Root cause mentions memory exhaustion | AG-026 / AG-028 chain, not “CrashLoop” alone |
 | Recommendation is check/verify style | Observe — no mutate |
 
-## Loop B — Memory is not proof
+## Loop B — Incident Memory (facts ≠ proof)
 
 ```bash
 make break SCENARIO=07-dependencies
@@ -58,7 +58,7 @@ kprompt agent run -n payments \
 | Prompt / context shows `namespace_memory (evidence, not proof)` | AG-034 |
 | Confidence capped if only memory, no Events/logs | memory ≠ proof |
 
-## Loop C — Patterns + outcome learning
+## Loop C — Incident Memory (patterns + outcomes)
 
 ```bash
 make break SCENARIO=01-crashloop
@@ -66,6 +66,7 @@ make verify
 
 # First pass learns the signature
 kprompt agent run -n payments --analyze --heuristic --patterns --duration 30s
+kprompt agent patterns list -n payments
 
 # Second pass should annotate “Seen before”
 kprompt agent run -n payments --analyze --heuristic --patterns --duration 30s
