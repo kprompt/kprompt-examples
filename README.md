@@ -5,8 +5,8 @@ Kubernetes cluster with deliberately broken workloads, so you can watch the
 **Observe agent** correlate incidents, score namespace health, and propose fixes
 against real cluster signals instead of a slide deck.
 
-Everything here runs offline in `--heuristic` mode: **no LLM API key, no cloud
-account, no spend.**
+Everything here runs offline in `--heuristic` mode: **$0 — no LLM provider key, no cloud
+account.**
 
 ## Requirements
 
