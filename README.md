@@ -26,7 +26,13 @@ make doctor   # kind, kubectl, docker, and a kprompt that has `agent`
 
 ## Quickstart
 
-One command — kind cluster, every failure scenario, then the Observe agent for ~45s:
+From the CLI (after kprompt is installed):
+
+```bash
+kprompt demo              # prerequisites + exact commands
+```
+
+Or one-shot — kind cluster, every failure scenario, then the Observe agent for ~45s:
 
 ```bash
 git clone https://github.com/kprompt/kprompt-examples.git
