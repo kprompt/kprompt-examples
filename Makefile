@@ -125,7 +125,7 @@ walkthrough: ## One-shot sellable demo: up → break-all → verify → agent-fu
 	@scripts/walkthrough.sh
 
 .PHONY: coordinator-e2e
-coordinator-e2e: ## Kind E2E: 07-dependencies → probe merge + durable Shared Knowledge (AG-048…060)
+coordinator-e2e: ## Kind E2E: 07-dependencies → probe merge + durable Shared Knowledge + outcome ring (AG-048…060 · RT-021)
 	@scripts/coordinator-e2e.sh
 
 .PHONY: record

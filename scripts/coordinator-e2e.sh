@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Kind E2E: 07-dependencies → Coordinator handoff + KubeProbe merge + durable Shared Knowledge
-# (AG-048…AG-050 · AG-059 · AG-060 · AG-061).
+# (AG-048…AG-050 · AG-059 · AG-060 · AG-061 · RT-021).
 #
 # Asserts:
 #   1. Coordinator accepts a handoff with suspectNamespace=platform
 #   2. --probe-kube merges platform Pod/Event evidence into CoordinatorReply
 #   3. mutateAttempted stays false
 #   4. GET /v1/knowledge shows payments→platform edge with durable=true (file store)
-#   5. After Coordinator restart, knowledge restores from the same file backend
-#   6. Ns agent run with --coordinator-url can surface a handoff line (best-effort)
+#   5. POST /v1/outcome + GET /v1/outcomes expose a durable cross-ns outcome ring (RT-021)
+#   6. After Coordinator restart, knowledge AND outcome ring restore from the file backend
+#   7. Ns agent run with --coordinator-url can surface a handoff line (best-effort)
 #
 # Usage:
 #   make coordinator-e2e
@@ -224,7 +225,35 @@ if [ "$know_edge" != "${NS}->platform" ]; then
   fail=1
 fi
 
-echo "==> restart Coordinator — restore knowledge from $COORD_KNOWLEDGE_DIR"
+echo "==> POST /v1/outcome + GET /v1/outcomes (RT-021 cross-ns outcome ring)"
+outcome_json="$(mktemp)"
+cat >"$outcome_json" <<EOF
+{"namespace":"platform","action":"restartDeployment","result":"apply_success","actionId":"restartDeployment","incidentId":"e2e-1"}
+EOF
+curl -sf -X POST "http://${COORD_ADDR}/v1/outcome" \
+  -H 'Content-Type: application/json' \
+  --data-binary @"$outcome_json" >/dev/null
+rm -f "$outcome_json"
+
+outcomes="$(curl -sf "http://${COORD_ADDR}/v1/outcomes")"
+echo "$outcomes" | python3 -c 'import json,sys; o=json.load(sys.stdin); print("outcomes durable=%s total=%s byResult=%s" % (o.get("durable"), o.get("total"), o.get("byResult")))'
+oc_durable="$(json_field "$outcomes" 'str(o.get("durable")).lower()')"
+oc_total="$(json_field "$outcomes" 'int(o.get("total") or 0)')"
+oc_success="$(json_field "$outcomes" 'int((o.get("byResult") or {}).get("apply_success") or 0)')"
+if [ "$oc_durable" != "true" ]; then
+  echo "FAIL /v1/outcomes durable=$oc_durable (want true with file store)" >&2
+  fail=1
+fi
+if [ "${oc_total:-0}" -lt 1 ]; then
+  echo "FAIL /v1/outcomes total=$oc_total" >&2
+  fail=1
+fi
+if [ "${oc_success:-0}" -lt 1 ]; then
+  echo "FAIL /v1/outcomes apply_success=$oc_success (want >=1)" >&2
+  fail=1
+fi
+
+echo "==> restart Coordinator — restore knowledge + outcome ring from $COORD_KNOWLEDGE_DIR"
 stop_coordinator
 start_coordinator
 knowledge2="$(curl -sf "http://${COORD_ADDR}/v1/knowledge")"
@@ -242,6 +271,18 @@ if [ "$know2_edge" != "${NS}->platform" ]; then
   fail=1
 fi
 echo "ok   Shared Knowledge restored after restart"
+
+outcomes2="$(curl -sf "http://${COORD_ADDR}/v1/outcomes")"
+echo "$outcomes2" | python3 -c 'import json,sys; o=json.load(sys.stdin); print("after-restore outcomes durable=%s total=%s" % (o.get("durable"), o.get("total")))'
+oc2_total="$(json_field "$outcomes2" 'int(o.get("total") or 0)')"
+oc2_success="$(json_field "$outcomes2" 'int((o.get("byResult") or {}).get("apply_success") or 0)')"
+if [ "${oc2_total:-0}" -lt 1 ] || [ "${oc2_success:-0}" -lt 1 ]; then
+  echo "FAIL outcome ring not restored after restart (total=$oc2_total success=$oc2_success)" >&2
+  echo "     coordinator log:" >&2
+  tail -n 40 /tmp/kprompt-coordinator-e2e.log >&2 || true
+  fail=1
+fi
+echo "ok   outcome ring restored after restart (total=$oc2_total)"
 
 echo "==> ns agent run (${DEMO_SECONDS}s) with --coordinator-url (best-effort handoff line)"
 set +e
@@ -271,4 +312,5 @@ echo
 echo "==> coordinator-e2e PASSED"
 echo "    probe merged evidence=$evidence_n mutateAttempted=false suspect=platform"
 echo "    knowledge durable + restored ${NS}->platform after restart"
+echo "    outcome ring durable + restored (RT-021) total=$oc2_total"
 echo "    tear down: make fix SCENARIO=07-dependencies && make down"
