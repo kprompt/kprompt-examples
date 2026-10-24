@@ -1,0 +1,88 @@
+# OpenAPI schema definitions for refreshed default models (P-007)
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+        - updatedAt
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        available:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - price
+        - available
+        - createdAt
+        - updatedAt
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        productIds:
+          type: array
+          items:
+            type: string
+        totalAmount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum:
+            - pending
+            - completed
+            - cancelled
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - productIds
+        - totalAmount
+        - status
+        - createdAt
+        - updatedAt
