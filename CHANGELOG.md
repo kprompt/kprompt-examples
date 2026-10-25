@@ -1,4 +1,6 @@
 ## [Unreleased]
 
 ### Added
-- Capability P-007: Refresh stale default models automatically or on demand to maintain hygiene and correctness. (#9)
+- Implemented Amazon Bedrock Enterprise Deferred provider (P-008) with basic inference simulation.
+- Added tests covering validation and success cases for Amazon Bedrock provider.
+- Added user documentation for Amazon Bedrock provider usage and configuration.
