@@ -1,18 +1,25 @@
-# TASK007 - Refresh stale default models
+# TASK007: Refresh stale default models
+
+## Background
+
+Over time, the default models used by the provider can become stale due to updates in dependencies, improvements in model definitions, or bug fixes. This task ensures that the default models are refreshed regularly to maintain hygiene and correctness.
 
 ## Goal
-Refresh and update the default models used in the provider to ensure they are current, maintainable, and aligned with the latest architecture standards.
 
-## Description
-Over time, default models can become stale due to evolving requirements and architecture changes. This task involves reviewing the existing default models, updating their definitions, and ensuring they are well-tested and documented.
+Implement capability P-007 to refresh stale default models automatically or on demand, ensuring the provider uses up-to-date model definitions.
 
 ## Acceptance Criteria
-- Default models are updated to reflect current architecture and best practices.
-- Tests validate the correctness and integrity of the refreshed models.
-- Documentation and changelog entries are updated to reflect changes.
-- No breaking changes to runtime behavior.
+
+- The provider detects when default models are stale (e.g., based on a version or timestamp).
+- The provider refreshes the default models accordingly.
+- Tests validate that stale models are detected and refreshed.
+- Documentation or CHANGELOG is updated to reflect this new capability.
 
 ## Notes
-- This is a hygiene task aimed at maintainability.
-- Keep the scope limited to default models only.
-- Ensure tests cover all updated models.
+
+- This is a **good first issue** for community contributors.
+- Keep the blast radius small; avoid large refactors or unrelated changes.
+- Follow the architecture guidelines for capability P-007.
+
+---
+<!-- coppergate-scout architectureId=P-007 -->
