@@ -1,4 +1,4 @@
 ## [Unreleased]
 
 ### Added
-- Implemented automatic refresh of stale default models to ensure up-to-date data and improved hygiene. (P-007)
+- Capability P-007: Refresh stale default models automatically or on demand to maintain hygiene and correctness. (#9)
