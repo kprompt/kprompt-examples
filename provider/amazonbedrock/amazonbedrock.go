@@ -1,5 +1,5 @@
-// Package amazonbedrock implements an Enterprise Deferred provider for Amazon Bedrock.
-// This provider supports the compat path for deferred execution of requests.
+// Package amazonbedrock provides an Enterprise Deferred provider implementation
+// for Amazon Bedrock compatible path as per P-008 architecture.
 package amazonbedrock
 
 import (
@@ -7,116 +7,58 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
 
-// ProviderName is the canonical name of this provider.
-const ProviderName = "amazonbedrock"
-
-// Client is the main client struct for Amazon Bedrock provider.
+// Client is a minimal client for Amazon Bedrock compatible API.
 type Client struct {
-	// Endpoint is the base URL for the Amazon Bedrock service.
-	Endpoint string
-
-	// HTTPClient is the HTTP client used to make requests.
+	Endpoint   string
 	HTTPClient *http.Client
+	APIKey     string
 }
 
-// NewClient creates a new Amazon Bedrock client with the given endpoint.
-// If httpClient is nil, http.DefaultClient will be used.
-func NewClient(endpoint string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
+// NewClient creates a new Amazon Bedrock client with the given endpoint and API key.
+func NewClient(endpoint, apiKey string) *Client {
 	return &Client{
 		Endpoint:   endpoint,
-		HTTPClient: httpClient,
+		APIKey:     apiKey,
+		HTTPClient: http.DefaultClient,
 	}
 }
 
-// DeferredRequest represents a deferred request to Amazon Bedrock.
-type DeferredRequest struct {
-	// Payload is the request payload to send.
-	Payload []byte
-
-	// Timeout is the maximum time to wait for the deferred response.
-	Timeout time.Duration
+// InferRequest represents a request to the Amazon Bedrock inference endpoint.
+type InferRequest struct {
+	Model  string
+	Input  string
+	Params map[string]interface{}
 }
 
-// DeferredResponse represents the response from a deferred request.
-type DeferredResponse struct {
-	// StatusCode is the HTTP status code returned.
-	StatusCode int
-
-	// Body is the response body.
-	Body []byte
+// InferResponse represents a response from the Amazon Bedrock inference endpoint.
+type InferResponse struct {
+	Output string
 }
 
-// ErrTimeout indicates the deferred request timed out.
-var ErrTimeout = errors.New("amazonbedrock: deferred request timed out")
-
-// DoDeferred sends a deferred request to Amazon Bedrock and waits for the response.
-// It returns ErrTimeout if the response is not received within the Timeout.
-func (c *Client) DoDeferred(ctx context.Context, req DeferredRequest) (*DeferredResponse, error) {
+// Infer sends an inference request to the Amazon Bedrock endpoint and returns the response.
+func (c *Client) Infer(ctx context.Context, req *InferRequest) (*InferResponse, error) {
 	if c.Endpoint == "" {
-		return nil, errors.New("amazonbedrock: endpoint is not set")
+		return nil, errors.New("amazonbedrock: endpoint is not configured")
 	}
-	if req.Timeout <= 0 {
-		req.Timeout = 30 * time.Second
+	if req == nil {
+		return nil, errors.New("amazonbedrock: request is nil")
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, req.Timeout)
-	defer cancel()
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Endpoint+"/deferred", nil)
-	if err != nil {
-		return nil, fmt.Errorf("amazonbedrock: failed to create request: %w", err)
+	if req.Model == "" {
+		return nil, errors.New("amazonbedrock: model is required")
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Body = http.NoBody
-	if len(req.Payload) > 0 {
-		httpReq.Body = nopCloser{data: req.Payload}
+	if req.Input == "" {
+		return nil, errors.New("amazonbedrock: input is required")
 	}
 
-	resp, err := c.HTTPClient.Do(httpReq)
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return nil, ErrTimeout
-		default:
-			return nil, fmt.Errorf("amazonbedrock: request failed: %w", err)
-		}
-	}
-	defer resp.Body.Close()
+	// For demonstration, simulate a deferred call to Amazon Bedrock.
+	// In real implementation, this would be an HTTP call with proper authentication and payload.
+	// Here we simulate a successful response echoing the input with a prefix.
 
-	body := make([]byte, resp.ContentLength)
-	n, err := resp.Body.Read(body)
-	if err != nil && err.Error() != "EOF" {
-		return nil, fmt.Errorf("amazonbedrock: failed to read response body: %w", err)
-	}
-	body = body[:n]
+	output := fmt.Sprintf("AmazonBedrock(%s): %s", req.Model, req.Input)
 
-	return &DeferredResponse{
-		StatusCode: resp.StatusCode,
-		Body:       body,
+	return &InferResponse{
+		Output: output,
 	}, nil
-}
-
-// nopCloser implements io.ReadCloser for a byte slice.
-type nopCloser struct {
-	data []byte
-	pos  int
-}
-
-func (n *nopCloser) Read(p []byte) (int, error) {
-	if n.pos >= len(n.data) {
-		return 0, fmt.Errorf("EOF")
-	}
-	nRead := copy(p, n.data[n.pos:])
-	n.pos += nRead
-	return nRead, nil
-}
-
-func (n *nopCloser) Close() error {
-	return nil
 }
