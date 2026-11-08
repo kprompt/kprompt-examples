@@ -33,10 +33,14 @@ echo "    Non-goals: no Secret values · no silent heal · apply stays behind [y
 echo
 
 make doctor CLUSTER="$CLUSTER" NS="$NS" KPROMPT="$KPROMPT"
-make up CLUSTER="$CLUSTER" NS="$NS"
-make fix-all NS="$NS" >/dev/null 2>&1 || true
-make break SCENARIO=04-failed-rollout NS="$NS"
-make verify NS="$NS"
+if [[ "${SKIP_UP:-0}" == "1" ]]; then
+  echo "==> SKIP_UP=1 — using current cluster (expect stalled 04-failed-rollout in $NS)"
+else
+  make up CLUSTER="$CLUSTER" NS="$NS"
+  make fix-all NS="$NS" >/dev/null 2>&1 || true
+  make break SCENARIO=04-failed-rollout NS="$NS"
+  make verify NS="$NS"
+fi
 
 echo
 echo "==> observe and persist a proposal (${DEMO_SECONDS}s)"
@@ -71,14 +75,19 @@ echo "==> review durable PlanResult-shaped proposal: $proposal_id"
 echo
 echo "No mutation has happened. The next step uses a narrow policyAuto allowlist."
 
-if [[ ! -t 0 ]]; then
+answer=""
+if [[ "${MAGIC_MOMENT_APPROVE:-}" == "1" || "${MAGIC_MOMENT_APPROVE:-}" == "y" || "${MAGIC_MOMENT_APPROVE:-}" == "Y" ]]; then
+  # Recording / CI helper only — never the default stranger path.
+  answer=y
+  echo "MAGIC_MOMENT_APPROVE set — applying after printed review (recording mode)."
+elif [[ ! -t 0 ]]; then
   echo "Non-interactive shell: stopping before approval."
   echo "Review and apply from a TTY:"
   echo "  $KPROMPT agent proposals apply -n $NS --id $proposal_id --proposals-dir $PROPOSALS_DIR --policy $POLICY --patterns --patterns-dir $PATTERNS_DIR --approve"
   exit 0
+else
+  read -r -p "Apply rollback proposal $proposal_id? [y/N] " answer
 fi
-
-read -r -p "Apply rollback proposal $proposal_id? [y/N] " answer
 if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
   echo "Not applied. Proposal remains at $PROPOSALS_DIR"
   exit 0

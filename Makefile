@@ -136,6 +136,10 @@ coordinator-e2e: ## Kind E2E: 07-dependencies → probe merge + durable Shared K
 record: ## Record asciinema (+ GIF if agg is installed). DEMO_SECONDS=60 SKIP_UP=0
 	@scripts/record.sh
 
+.PHONY: record-magic-moment
+record-magic-moment: ## Record IC-001 magic-moment cast/GIF. DEMO_SECONDS=28 SKIP_UP=0
+	@scripts/record-magic-moment.sh
+
 .PHONY: down
 down: ## Delete the kind cluster
 	@echo "==> deleting kind cluster $(CLUSTER)"

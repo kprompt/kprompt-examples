@@ -66,20 +66,24 @@ Tear down when you are done:
 make down   # deletes the kind cluster entirely
 ```
 
-### Record a 60s clip
+### Record a clip
 
-One command prepares kind (unless `SKIP_UP=1`), records the Observe agent, and optionally renders a GIF:
+Canonical **magic-moment** GIF (IC-001 loop):
 
 ```bash
-brew install asciinema          # required
-# optional GIF: cargo install --git https://github.com/asciinema/agg
-
-make record                     # → dist/kprompt-observe-demo.cast (+ .gif if agg is on PATH)
-DEMO_SECONDS=45 make record
-SKIP_UP=1 make record           # reuse an already-broken cluster
+brew install asciinema agg   # agg optional but recommended
+make record-magic-moment     # → dist/kprompt-magic-moment.{cast,gif}
 ```
 
-Play locally with `asciinema play dist/kprompt-observe-demo.cast`, or upload with `asciinema upload …`.
+Advanced multi-scenario Observe recording (noisy):
+
+```bash
+make record                  # → dist/kprompt-observe-demo.{cast,gif}
+DEMO_SECONDS=45 make record
+SKIP_UP=1 make record        # reuse an already-broken cluster
+```
+
+Play locally with `asciinema play dist/kprompt-magic-moment.cast`.
 
 ## Scenarios
 
