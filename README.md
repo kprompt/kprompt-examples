@@ -33,7 +33,15 @@ kprompt demo              # prerequisites + exact commands
 ```
 
 Run the canonical product loop — one failed rollout, one durable proposal, explicit
-human approval, post-apply verification, and Learn writeback:
+human approval, post-apply verification, and Learn writeback.
+
+**Second-hit Learn (IC-009)** — same fingerprint twice; show `learnNote` / `actionConfidence` bias (evidence-not-proof):
+
+```bash
+make learn-second-hit
+```
+
+Canonical first-hit path:
 
 ```bash
 git clone https://github.com/kprompt/kprompt-examples.git

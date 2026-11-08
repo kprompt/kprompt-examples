@@ -128,6 +128,10 @@ walkthrough: ## Advanced Observe demo: up → break-all → verify → agent-ful
 magic-moment: ## Canonical demo: failed rollout → proposal → human approve → verify → Learn
 	@scripts/magic-moment.sh
 
+.PHONY: learn-second-hit
+learn-second-hit: ## IC-009: same failed rollout twice — show Learn bias on second proposal
+	@scripts/learn-second-hit.sh
+
 .PHONY: coordinator-e2e
 coordinator-e2e: ## Kind E2E: 07-dependencies → probe merge + durable Shared Knowledge + outcome ring (AG-048…060 · RT-021)
 	@scripts/coordinator-e2e.sh
