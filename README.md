@@ -41,6 +41,8 @@ human approval, post-apply verification, and Learn writeback.
 make learn-second-hit
 ```
 
+**CI:** the product repo runs non-interactive `make magic-moment` nightly (`MAGIC_MOMENT_APPROVE=1`) via [kprompt/.github/workflows/magic-moment.yml](https://github.com/kprompt/kprompt/blob/main/.github/workflows/magic-moment.yml). This repo’s `validate` workflow still covers manifests only.
+
 Canonical first-hit path:
 
 ```bash
