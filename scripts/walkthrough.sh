@@ -19,6 +19,7 @@ cd "$ROOT"
 source "$ROOT/scripts/resolve-kprompt.sh"
 export KPROMPT
 echo "==> using $KPROMPT ($("$KPROMPT" version 2>/dev/null || echo unknown))"
+echo "    Non-goals: no Secret values · no silent heal · propose-only (apply stays behind --approve)"
 
 make doctor CLUSTER="$CLUSTER" NS="$NS" KPROMPT="$KPROMPT"
 make up CLUSTER="$CLUSTER" NS="$NS"
