@@ -32,17 +32,23 @@ From the CLI (after kprompt is installed):
 kprompt demo              # prerequisites + exact commands
 ```
 
-Or one-shot — kind cluster, every failure scenario, then the Observe agent for ~45s:
+Run the canonical product loop — one failed rollout, one durable proposal, explicit
+human approval, post-apply verification, and Learn writeback:
 
 ```bash
 git clone https://github.com/kprompt/kprompt-examples.git
 cd kprompt-examples
-make walkthrough
+make magic-moment
 ```
 
-That is `up → break-all → verify → agent-full`. Needs **kprompt v0.5+** (`agent`
-subcommand). `make doctor` finds a usable binary even when Homebrew still shadows
-an older `kprompt` on PATH (common: brew 0.3 vs `~/.local/bin` 0.5).
+The script shows the stored PlanResult-shaped proposal before asking `[y/N]`.
+Apply is allowed only by the narrow policy in
+[`demo/policy-auto.json`](demo/policy-auto.json), and still requires your explicit
+approval. In a non-interactive shell it stops after printing the review/apply
+command; it never assumes approval.
+
+For the noisy all-scenarios Observe demo, use `make walkthrough`
+(`up → break-all → verify → agent-full`).
 
 Step by step:
 
@@ -85,7 +91,7 @@ the agent is expected to conclude.
 | [`01-crashloop`](scenarios/01-crashloop) | container exits 1 in a loop | incident correlation, `--fetch-logs` evidence |
 | [`02-image-pull`](scenarios/02-image-pull) | image tag does not exist | analysis with **no** logs available |
 | [`03-oom`](scenarios/03-oom) | allocates past its memory limit | OOM bucketing, `--patterns` seen-before |
-| [`04-failed-rollout`](scenarios/04-failed-rollout) | revision 2 stalls, revision 1 still serving | `--autopilot-propose` (propose-only) |
+| [`04-failed-rollout`](scenarios/04-failed-rollout) | revision 2 stalls, revision 1 still serving | proposal → approve → verify → Learn |
 | [`05-pending-pvc`](scenarios/05-pending-pvc) | PVC never binds, pod stays Pending | why `--watch pods,events,pvc` matters |
 | [`06-job-failure`](scenarios/06-job-failure) | Job + CronJob keep failing | dedup of recurring batch failures |
 | [`07-dependencies`](scenarios/07-dependencies) | orders → platform/cache + local redis/postgres stubs | `--memory` + Coordinator probe (`make coordinator-e2e`) |
@@ -136,7 +142,7 @@ kprompt agent run -n payments \
 | `--heuristic` | no LLM calls at all — offline and free |
 | `--memory` | injects discovered dependency facts into the analysis |
 | `--patterns` | boosts confidence on incidents it has seen before |
-| `--autopilot-propose` | emits a propose-only remediation plan, never applies it |
+| `--autopilot-propose` | emits and stores a remediation proposal; applying it is a separate policy + approval step |
 
 ## Running the agent in-cluster
 
@@ -161,9 +167,10 @@ RBAC is a **Role + RoleBinding in `payments` only** — read verbs, no ClusterRo
 
 Being straight about it, since demo repos are where overclaiming happens:
 
-- **No silent remediation.** Autopilot is propose-only in the current MVP
+- **No silent remediation.** Autopilot defaults to propose-only
   ([ADR-0015](https://github.com/kprompt/kprompt-architecture/blob/main/decisions/ADR-0015-autopilot-mode.md)).
-  `04-failed-rollout` prints a plan; *you* run `kubectl rollout undo`.
+  `04-failed-rollout` can be applied only after a human reviews the stored proposal,
+  enables a narrow `policyAuto` allowlist, and explicitly approves it.
 - **No mutations from the agent at all.** Observe mode has read verbs only
   ([ADR-0013](https://github.com/kprompt/kprompt-architecture/blob/main/decisions/ADR-0013-in-cluster-agent.md)).
 - **Heuristic analysis is not LLM analysis.** It is deterministic and offline, which

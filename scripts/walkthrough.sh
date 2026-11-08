@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sellable one-shot walkthrough:
+# Advanced multi-scenario Observe walkthrough:
 #   make up → break-all → verify → agent-full
 #
 # Heuristic mode — no LLM key. Stops after DEMO_SECONDS (default 45) so it is
@@ -49,4 +49,5 @@ set -e
 echo
 echo "==> walkthrough done (agent exit=$status)"
 echo "    keep watching:  make agent-full NS=$NS KPROMPT=$KPROMPT"
+echo "    canonical loop: make magic-moment"
 echo "    tear down:      make down CLUSTER=$CLUSTER"

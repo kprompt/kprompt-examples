@@ -24,7 +24,7 @@ help: ## Show this help
 	@for s in $(SCENARIOS); do echo "  $$s"; done
 	@echo
 	@echo "Vars: CLUSTER=$(CLUSTER) NS=$(NS) SCENARIO=$(SCENARIO)"
-	@echo "One-shot: make walkthrough   (up → break-all → verify → agent-full)"
+	@echo "Start here: make magic-moment (failed rollout → proposal → approve → verify → Learn)"
 
 .PHONY: doctor
 doctor: ## Check required tools (kind, kubectl, kprompt>=0.5 with agent)
@@ -54,7 +54,7 @@ up: ## Create the kind cluster and apply the baseline namespace
 	@$(KUBECTL) config use-context kind-$(CLUSTER)
 	@$(MAKE) --no-print-directory base
 	@echo
-	@echo "Cluster ready. Next: make walkthrough   # or make break && make agent"
+	@echo "Cluster ready. Next: make magic-moment   # or make break && make agent"
 
 .PHONY: base
 base: ## Apply namespace + healthy baseline workload
@@ -121,8 +121,12 @@ agent-full: ## Run the agent with logs, expanded watches, memory, patterns and p
 		--memory --patterns --autopilot-propose
 
 .PHONY: walkthrough
-walkthrough: ## One-shot sellable demo: up → break-all → verify → agent-full (DEMO_SECONDS=45)
+walkthrough: ## Advanced Observe demo: up → break-all → verify → agent-full (DEMO_SECONDS=45)
 	@scripts/walkthrough.sh
+
+.PHONY: magic-moment
+magic-moment: ## Canonical demo: failed rollout → proposal → human approve → verify → Learn
+	@scripts/magic-moment.sh
 
 .PHONY: coordinator-e2e
 coordinator-e2e: ## Kind E2E: 07-dependencies → probe merge + durable Shared Knowledge + outcome ring (AG-048…060 · RT-021)

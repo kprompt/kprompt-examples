@@ -1,0 +1,11 @@
+{
+  "apiVersion": "kprompt.io/v1",
+  "kind": "RemediationPolicy",
+  "schemaVersion": "1",
+  "allow": [
+    "rollbackFailedRollout"
+  ],
+  "apply": true,
+  "mode": "policyAuto",
+  "minConfidence": 0.65
+}

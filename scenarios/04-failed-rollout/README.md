@@ -16,7 +16,7 @@ because `rollbackFailedRollout` is the only allowlisted MVP action.
 | Analyze | Root cause names the failed revision |
 | Autopilot | Emits an `AutopilotProposal` (PlanResult-shaped) for `rollbackFailedRollout` |
 | Audit | Proposal appended to `~/.config/kprompt/autopilot/*.jsonl` |
-| Applied | **false** — the MVP never applies. Nothing in your cluster changes |
+| Applied | **false by default** — apply is a separate policy-gated, human-approved step |
 
 ## Run
 
@@ -27,11 +27,18 @@ kprompt agent run -n payments \
   --watch pods,events,deployments,replicasets \
   --analyze --health --heuristic --autopilot-propose
 
-# The proposal is a suggestion. You roll back, not the agent:
-kubectl -n payments rollout undo deployment/checkout
+# List and inspect the durable proposal.
+kprompt agent proposals list -n payments
+kprompt agent proposals show -n payments --id <proposal-id>
 
-make fix SCENARIO=04-failed-rollout
+# Apply only after review. This also verifies and writes a Learn outcome.
+kprompt agent proposals apply -n payments --id <proposal-id> \
+  --approve --policy ./demo/policy-auto.json --patterns
 ```
+
+The canonical guided version is `make magic-moment`. It isolates proposal and
+pattern state, prints the full proposal, and asks `[y/N]` immediately before apply.
+Non-interactive runs stop before the mutation.
 
 ## Notes
 

@@ -12,6 +12,8 @@ metadata:
 spec:
   replicas: 2
   revisionHistoryLimit: 5
+  # Short deadline so ProgressDeadlineExceeded (and rollback) can fire inside magic-moment.
+  progressDeadlineSeconds: 45
   strategy:
     type: RollingUpdate
     rollingUpdate:
